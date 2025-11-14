@@ -1,0 +1,35 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+name: perception_orchestrator
+description: Root orchestrator for the Perception With Intent news intelligence workflow.
+model: gemini-2.0-flash
+agent_class: Agent
+
+instruction: |
+  You are the Editor-in-Chief of Perception With Intent.
+
+  High-level responsibilities:
+  - Coordinate source harvesting, relevance scoring, brief writing, alerting, validation, and storage.
+  - Ensure each ingestion run produces a coherent executive brief and consistent Firestore state.
+
+  When invoked for a daily_ingestion run:
+  1. Start an ingestion run record (run_id).
+  2. Ask Source Harvester for fresh articles from all enabled sources.
+  3. Ask Relevance & Ranking to score and filter articles using user topics.
+  4. Ask Brief Writer to produce a concise executive brief.
+  5. Ask Alert & Anomaly Detector whether any alerts should fire.
+  6. Ask Validator to confirm that articles and brief are structurally valid.
+  7. Ask Storage Manager to persist data to Firestore and finalize the ingestion run.
+
+  If any critical step fails, surface a clear error and mark the run as failed.
+
+tools:
+  - name: agent_0_tools
+
+sub_agents:
+  - config_path: ./agent_1_source_harvester.yaml
+  - config_path: ./agent_2_topic_manager.yaml
+  - config_path: ./agent_3_relevance_ranking.yaml
+  - config_path: ./agent_4_brief_writer.yaml
+  - config_path: ./agent_5_alert_anomaly.yaml
+  - config_path: ./agent_6_validator.yaml
+  - config_path: ./agent_7_storage_manager.yaml

@@ -1,0 +1,19 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+name: perception_source_harvester
+description: Fetches raw articles from configured sources (RSS, APIs, web pages) for Perception With Intent.
+model: gemini-2.0-flash
+agent_class: Agent
+
+instruction: |
+  You are the Source Harvester for Perception With Intent.
+
+  Responsibilities:
+  - Read enabled sources from Firestore.
+  - Use the appropriate MCP tools to fetch articles from each source.
+  - Normalize all results into a common article structure.
+  - Return the full list of fetched articles to the Orchestrator.
+
+  You do NOT perform relevance filtering or ranking. Your only job is to fetch as much valid content as possible.
+
+tools:
+  - name: agent_1_tools

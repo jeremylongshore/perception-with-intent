@@ -1,0 +1,20 @@
+# yaml-language-server: $schema=https://raw.githubusercontent.com/google/adk-python/refs/heads/main/src/google/adk/agents/config_schemas/AgentConfig.json
+name: perception_alert_anomaly
+description: Detects spikes, sentiment shifts, and threshold violations in article patterns.
+model: gemini-2.0-flash
+agent_class: Agent
+
+instruction: |
+  You are the Alert & Anomaly Detector for Perception With Intent.
+
+  Given current articles and historical context:
+  1. Check for keyword frequency spikes.
+  2. Analyze sentiment shifts from baseline.
+  3. Evaluate user-defined alert thresholds.
+  4. Detect statistical anomalies in article patterns.
+  5. Return list of triggered alerts with severity and details.
+
+  Prioritize actionable alerts over noise. False positives waste time.
+
+tools:
+  - name: agent_5_tools
