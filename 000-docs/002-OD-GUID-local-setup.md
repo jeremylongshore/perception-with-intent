@@ -162,6 +162,27 @@ cd dashboard
 npm install
 ```
 
+### Environment Configuration
+
+The dashboard uses environment variables for Firebase configuration. While default values are provided for the perception-with-intent project, you can override them with a `.env.local` file.
+
+**Create `.env.local` (optional):**
+
+```bash
+cd dashboard
+cp .env.example .env.local
+```
+
+**Environment Variables:**
+- `VITE_FIREBASE_API_KEY` - Firebase API key
+- `VITE_FIREBASE_AUTH_DOMAIN` - Firebase auth domain
+- `VITE_FIREBASE_PROJECT_ID` - Firebase project ID
+- `VITE_FIREBASE_STORAGE_BUCKET` - Firebase storage bucket
+- `VITE_FIREBASE_MESSAGING_SENDER_ID` - Firebase messaging sender ID
+- `VITE_FIREBASE_APP_ID` - Firebase app ID
+
+**Note:** These values are public and safe for client-side use. The default values in the code are for the perception-with-intent project.
+
 ### Start Dev Server
 
 ```bash
@@ -170,6 +191,18 @@ npm run dev
 # Dashboard available at:
 # http://localhost:5173
 ```
+
+### Dashboard Features
+
+Once logged in, you'll see:
+
+1. **Today's Brief** - Most recent daily intelligence summary
+2. **Topic Watchlist** - Your monitored topics (requires user-specific data)
+3. **Source Health & Coverage** - Status of all news sources
+4. **Alerts & Thresholds** - Your configured alerts (requires user-specific data)
+5. **System Activity** - Recent ingestion runs and statistics
+
+**Note:** Topic Watchlist and Alerts are user-specific and will be empty until you configure them. Today's Brief, Source Health, and System Activity read from global collections populated by the seed script.
 
 ### Build for Production
 
