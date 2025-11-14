@@ -1,0 +1,29 @@
+rules_version = '2';
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+    // Topics collection - read-only for now
+    match /topics_to_monitor/{topicId} {
+      allow read: if true;
+      allow write: if false; // Admin only via backend
+    }
+
+    // Articles collection - read-only
+    match /articles/{articleId} {
+      allow read: if true;
+      allow write: if false; // Written by agents only
+    }
+
+    // Daily summaries - read-only
+    match /daily_summaries/{summaryId} {
+      allow read: if true;
+      allow write: if false; // Written by agents only
+    }
+
+    // Run metrics - read-only
+    match /run_metrics/{metricId} {
+      allow read: if true;
+      allow write: if false; // Written by agents only
+    }
+  }
+}
