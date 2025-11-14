@@ -1,0 +1,84 @@
+# RSS Feed Sources for News Aggregation
+# Add or remove feeds as needed
+
+sources:
+  # World News
+  - name: "BBC News - World"
+    url: "http://feeds.bbci.co.uk/news/world/rss.xml"
+    category: "world"
+    active: true
+
+  - name: "The Guardian - World"
+    url: "https://www.theguardian.com/world/rss"
+    category: "world"
+    active: true
+
+  - name: "NPR News"
+    url: "https://feeds.npr.org/1001/rss.xml"
+    category: "world"
+    active: true
+
+  - name: "Reuters - World News"
+    url: "https://www.reutersagency.com/feed/?taxonomy=best-topics&post_type=best"
+    category: "world"
+    active: true
+
+  # Technology
+  - name: "TechCrunch"
+    url: "https://techcrunch.com/feed/"
+    category: "tech"
+    active: true
+
+  - name: "The Verge"
+    url: "https://www.theverge.com/rss/index.xml"
+    category: "tech"
+    active: true
+
+  - name: "Ars Technica"
+    url: "http://feeds.arstechnica.com/arstechnica/index"
+    category: "tech"
+    active: true
+
+  # Business
+  - name: "Financial Times"
+    url: "https://www.ft.com/?format=rss"
+    category: "business"
+    active: true
+
+  - name: "Bloomberg"
+    url: "https://feeds.bloomberg.com/markets/news.rss"
+    category: "business"
+    active: true
+
+  - name: "Wall Street Journal"
+    url: "https://feeds.a.dj.com/rss/RSSWorldNews.xml"
+    category: "business"
+    active: true
+
+  # Science
+  - name: "Science Daily"
+    url: "https://www.sciencedaily.com/rss/all.xml"
+    category: "science"
+    active: true
+
+  - name: "Nature"
+    url: "http://feeds.nature.com/nature/rss/current"
+    category: "science"
+    active: true
+
+  # Sports (example - customize based on interests)
+  - name: "ESPN"
+    url: "https://www.espn.com/espn/rss/news"
+    category: "sports"
+    active: false  # Disabled by default
+
+  # Politics
+  - name: "Politico"
+    url: "https://www.politico.com/rss/politics08.xml"
+    category: "politics"
+    active: true
+
+  - name: "The Hill"
+    url: "https://thehill.com/news/feed/"
+    category: "politics"
+    active: true

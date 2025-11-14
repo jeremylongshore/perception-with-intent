@@ -1,0 +1,68 @@
+name: Deploy Slack Webhook
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'slack-webhook/**'
+  workflow_dispatch:
+
+jobs:
+  deploy-slack-webhook:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: 'read'
+      id-token: 'write'
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: 'projects/${{ vars.GCP_PROJECT_NUMBER }}/locations/global/workloadIdentityPools/${{ secrets.WIF_POOL_ID }}/providers/${{ secrets.WIF_PROVIDER_ID }}'
+          service_account: '${{ secrets.GCP_SERVICE_ACCOUNT }}'
+          project_id: ${{ vars.PROJECT_ID }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Deploy Slack Webhook Function
+        run: |
+          gcloud functions deploy slack-webhook \
+            --gen2 \
+            --runtime=python312 \
+            --region=us-central1 \
+            --source=./slack-webhook \
+            --entry-point=slack_events \
+            --trigger-http \
+            --allow-unauthenticated \
+            --project=${{ vars.PROJECT_ID }} \
+            --set-env-vars=PROJECT_ID=${{ vars.PROJECT_ID }}
+
+      - name: Get Function URL
+        id: get-url
+        run: |
+          FUNCTION_URL=$(gcloud functions describe slack-webhook \
+            --region=us-central1 \
+            --project=${{ vars.PROJECT_ID }} \
+            --gen2 \
+            --format='value(serviceConfig.uri)')
+          echo "function_url=$FUNCTION_URL" >> $GITHUB_OUTPUT
+          echo "Slack Webhook URL: $FUNCTION_URL"
+
+      - name: Display Slack Configuration
+        run: |
+          echo "========================================="
+          echo "Slack App Configuration"
+          echo "========================================="
+          echo "1. Go to: https://api.slack.com/apps/A099YKLCM1N/event-subscriptions"
+          echo "2. Update Request URL to: ${{ steps.get-url.outputs.function_url }}"
+          echo "3. Subscribe to bot events:"
+          echo "   - message.channels"
+          echo "   - message.im"
+          echo "   - app_mention"
+          echo "4. Save Changes"
+          echo "========================================="

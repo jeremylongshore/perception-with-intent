@@ -1,0 +1,29 @@
+name: Feature Request
+description: New capability or improvement
+labels: ["enhancement"]
+body:
+  - type: textarea
+    id: feature
+    attributes:
+      label: What do you want to add?
+      description: Describe the feature
+      placeholder: "Add support for video generation with Veo..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: why
+    attributes:
+      label: Why is this useful?
+      placeholder: "This would let Bob create video content for..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: solution
+    attributes:
+      label: How should it work?
+      description: Optional - describe your ideal implementation
+      placeholder: "Maybe add a new tool that calls Veo API..."
+    validations:
+      required: false

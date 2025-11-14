@@ -1,0 +1,51 @@
+name: deploy-agent-engine
+
+on:
+  workflow_dispatch:
+    inputs:
+      project_id:
+        description: "Google Cloud project ID"
+        required: true
+      location:
+        description: "Vertex AI location (e.g., us-central1)"
+        required: true
+      agent_engine_id:
+        description: "Vertex AI Agent Engine resource ID"
+        required: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      id-token: write
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install tooling
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+          pip install google-adk-cli  # TODO(ask): replace with sanctioned package name if different.
+
+      - name: Authenticate to Google Cloud
+        uses: google-github-actions/auth@v2
+        with:
+          token_format: access_token
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Export deployment variables
+        run: |
+          echo "VERTEX_PROJECT_ID=${{ github.event.inputs.project_id }}" >> "$GITHUB_ENV"
+          echo "VERTEX_LOCATION=${{ github.event.inputs.location }}" >> "$GITHUB_ENV"
+          echo "VERTEX_AGENT_ENGINE_ID=${{ github.event.inputs.agent_engine_id }}" >> "$GITHUB_ENV"
+
+      - name: Deploy to Agent Engine
+        run: scripts/deploy_agent_engine.sh

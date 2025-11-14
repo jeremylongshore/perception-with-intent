@@ -1,0 +1,21 @@
+version: 1
+name: iamjvp-commander
+description: "Strategic command agent baseline for Vertex AI Agent Engine (A2A ready)."
+model:
+  name: "gemini-1.5-pro"  # TODO(ask): confirm model per manuals
+  temperature: 0.2
+  top_p: 0.9
+tools:
+  - id: command_echo
+    python: "jvp_agent.tools.echo_tool:echo_command"
+    description: "Echo back command payloads as structured responses."
+  - id: strategy_orchestrator
+    python: "jvp_agent.tools.strategic_orchestrator:orchestrate_strategy"
+    description: "Generate balanced risk/opportunity read-outs using local heuristics."
+callbacks:
+  after_agent:
+    python: "jvp_agent.agent:add_session_to_memory"
+runtime:
+  max_output_tokens: 768
+metadata:
+  a2a_card: "python:jvp_agent.a2a:build_agent_card"

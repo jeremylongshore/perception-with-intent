@@ -1,0 +1,5 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Documentation
+    url: https://github.com/jeremylongshore/iam1-regional-manager/blob/main/README.md
+    about: Check the README for setup and usage info

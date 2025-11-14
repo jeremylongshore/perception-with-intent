@@ -1,0 +1,82 @@
+name: Deploy Agents to Vertex AI
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'app/**'
+      - 'infra/**'
+      - '.github/workflows/deploy-agents.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # Required for WIF
+
+jobs:
+  deploy-agents:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+
+      - name: Install dependencies
+        run: |
+          pip install -r requirements.txt
+          pip install google-adk
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Configure Docker for Artifact Registry
+        run: |
+          gcloud auth configure-docker us-central1-docker.pkg.dev
+
+      - name: Deploy Agent 0 (Root Orchestrator)
+        run: |
+          adk deploy agent_engine \
+            --project=perception-with-intent \
+            --region=us-central1 \
+            --staging_bucket=gs://perception-staging \
+            --display_name="Perception Root Orchestrator" \
+            app/perception_agent/agents/agent_0_orchestrator.yaml \
+            --trace_to_cloud \
+            --cpu=2 \
+            --memory=2Gi \
+            --min_instances=0 \
+            --max_instances=5
+
+      - name: Deploy Agent 1 (Topic Manager)
+        run: |
+          adk deploy agent_engine \
+            --project=perception-with-intent \
+            --region=us-central1 \
+            --staging_bucket=gs://perception-staging \
+            --display_name="Perception Topic Manager" \
+            app/perception_agent/agents/agent_1_topic_manager.yaml \
+            --trace_to_cloud \
+            --cpu=1 \
+            --memory=1Gi \
+            --min_instances=0 \
+            --max_instances=3
+
+      - name: Deployment Summary
+        run: |
+          echo "## Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project:** perception-with-intent" >> $GITHUB_STEP_SUMMARY
+          echo "- **Region:** us-central1" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

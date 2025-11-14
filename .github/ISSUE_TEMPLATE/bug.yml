@@ -1,0 +1,40 @@
+name: Bug Report
+description: Something's broken
+labels: ["bug"]
+body:
+  - type: textarea
+    id: what-happened
+    attributes:
+      label: What happened?
+      description: Quick description of the issue
+      placeholder: "Bob isn't responding in Slack..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: expected
+    attributes:
+      label: What should happen instead?
+      placeholder: "Bob should respond within 5 seconds..."
+    validations:
+      required: true
+
+  - type: textarea
+    id: reproduce
+    attributes:
+      label: How to reproduce
+      placeholder: |
+        1. Deploy agent
+        2. Send message in Slack
+        3. See error...
+    validations:
+      required: false
+
+  - type: textarea
+    id: logs
+    attributes:
+      label: Logs or error messages
+      description: Paste any relevant logs
+      render: shell
+    validations:
+      required: false

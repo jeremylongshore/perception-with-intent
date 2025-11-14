@@ -1,0 +1,12 @@
+# Example remote state backend configuration.
+# Copy to backend.tf and adjust values when ready.
+
+# terraform {
+#   backend "gcs" {
+#     bucket = "my-terraform-state"
+#     prefix = "iamjvp/dev"
+#     project = "my-gcp-project"
+#   }
+# }
+
+# TODO(ask): Confirm shared state bucket naming convention before enabling.

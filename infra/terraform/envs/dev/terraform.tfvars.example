@@ -1,0 +1,12 @@
+# Example variables for IAMJVP dev environment
+project_id = "my-gcp-project"
+billing_id = "XXXXXX-XXXXXX-XXXXXX"
+region     = "us-central1"
+repo_name  = "iamjvp-agent"
+
+# Uncomment if you want Terraform to create supporting resources immediately
+# create_artifact_repo      = true
+# enable_service_account    = true
+# create_secret             = true
+# secret_id                 = "iamjvp-agent-config"
+# secret_replica_locations  = ["us-central1"]

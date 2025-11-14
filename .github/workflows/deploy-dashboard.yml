@@ -1,0 +1,59 @@
+name: Deploy Dashboard to Firebase
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - 'dashboard/**'
+      - '.github/workflows/deploy-dashboard.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  id-token: write  # Required for WIF
+
+jobs:
+  deploy-dashboard:
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: 'dashboard/package-lock.json'
+
+      - name: Install dependencies
+        working-directory: ./dashboard
+        run: npm ci
+
+      - name: Build dashboard
+        working-directory: ./dashboard
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT }}
+
+      - name: Deploy to Firebase Hosting
+        working-directory: ./dashboard
+        run: |
+          npm install -g firebase-tools
+          firebase deploy --only hosting --project perception-with-intent --non-interactive
+
+      - name: Deployment Summary
+        run: |
+          echo "## Dashboard Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "- **URL:** https://perception-with-intent.web.app" >> $GITHUB_STEP_SUMMARY
+          echo "- **Project:** perception-with-intent" >> $GITHUB_STEP_SUMMARY
+          echo "- **Commit:** ${{ github.sha }}" >> $GITHUB_STEP_SUMMARY
+          echo "- **Triggered by:** ${{ github.actor }}" >> $GITHUB_STEP_SUMMARY

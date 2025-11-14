@@ -1,0 +1,46 @@
+name: ci
+
+on:
+  push:
+  pull_request:
+
+jobs:
+  validate:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+
+      - name: Install lint dependencies
+        run: pip install --upgrade pip black ruff
+
+      - name: Install project requirements
+        run: pip install -r requirements.txt
+
+      - name: Run Python formatters and linters
+        run: scripts/fmt_vet_lint.sh
+
+      - name: Set up Terraform
+        uses: hashicorp/setup-terraform@v3
+        with:
+          terraform_version: "1.9.5"
+
+      - name: Terraform init
+        run: terraform -chdir=infra/terraform/envs/dev init -backend=false -input=false
+
+      - name: Terraform fmt
+        run: terraform -chdir=infra/terraform/envs/dev fmt -check
+
+      - name: Terraform validate
+        run: terraform -chdir=infra/terraform/envs/dev validate -no-color
+
+      - name: ADK YAML sanity
+        run: |
+          echo "TODO(ask): replace with official ADK validation command."
