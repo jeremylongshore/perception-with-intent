@@ -65,12 +65,8 @@ jobs:
             --region=${{ env.REGION }} \
             --staging_bucket=gs://perception-staging \
             --display_name="Perception Intelligence System" \
-            agent_engine_app.py \
             --trace_to_cloud \
-            --cpu=4 \
-            --memory=8Gi \
-            --min_instances=1 \
-            --max_instances=10
+            agent_engine_app.py
 
       - name: Verify deployment
         run: |
