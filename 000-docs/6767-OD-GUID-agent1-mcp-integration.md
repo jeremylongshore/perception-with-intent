@@ -372,19 +372,19 @@ cd app/mcp_service
 pip install -r requirements.txt
 
 # Start service
-uvicorn main:app --reload --port 8081
+uvicorn main:app --reload --port 8080
 ```
 
 **Expected Output:**
 ```
-INFO:     Uvicorn running on http://127.0.0.1:8081
+INFO:     Uvicorn running on http://127.0.0.1:8080
 INFO:     Application startup complete.
 ```
 
 ### 2. Test MCP Endpoint Directly
 
 ```bash
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{
     "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/",
@@ -449,7 +449,7 @@ First article:
 
 ```bash
 # Test single feed
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{
     "feed_url": "https://news.ycombinator.com/rss",
@@ -468,15 +468,15 @@ curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
 Agent 1 reads the MCP base URL from environment:
 
 ```bash
-export MCP_BASE_URL=http://localhost:8081  # Local development
+export MCP_BASE_URL=http://localhost:8080  # Local development
 export MCP_BASE_URL=https://mcp-service-HASH-uc.a.run.app  # Cloud Run production
 ```
 
-**Default:** `http://localhost:8081`
+**Default:** `http://localhost:8080`
 
 **agent_1_tools.py:**
 ```python
-MCP_BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8081")
+MCP_BASE_URL = os.getenv("MCP_BASE_URL", "http://localhost:8080")
 endpoint = f"{MCP_BASE_URL}/mcp/tools/fetch_rss_feed"
 ```
 
@@ -624,7 +624,7 @@ cat /home/jeremy/000-projects/perception/data/initial_feeds.csv
 
 **Causes:**
 - MCP service not running
-- Wrong port (should be 8081)
+- Wrong port (should be 8080)
 - Wrong MCP_BASE_URL
 
 **Fix:**
@@ -633,11 +633,11 @@ cat /home/jeremy/000-projects/perception/data/initial_feeds.csv
 ps aux | grep uvicorn
 
 # Check port
-curl http://localhost:8081/health
+curl http://localhost:8080/health
 
 # Start MCP service if needed
 cd /home/jeremy/000-projects/perception/app/mcp_service
-uvicorn main:app --reload --port 8081
+uvicorn main:app --reload --port 8080
 ```
 
 ### "All articles have empty content"

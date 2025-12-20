@@ -20,6 +20,19 @@ jobs:
       id-token: write
 
     steps:
+      - name: Print Deployment Targets
+        run: |
+          echo "=========================================="
+          echo "Perception Deployment Targets"
+          echo "=========================================="
+          echo "Project ID:       ${{ env.PROJECT_ID }}"
+          echo "Region:           ${{ env.REGION }}"
+          echo "Staging Bucket:   gs://perception-staging"
+          echo "Display Name:     Perception Intelligence System"
+          echo "Agent YAML:       app/perception_agent/agents/agent_0_orchestrator.yaml"
+          echo "Docker Registry:  ${{ env.ARTIFACT_REGISTRY }}/${{ env.PROJECT_ID }}/perception-agents"
+          echo "=========================================="
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -66,7 +79,7 @@ jobs:
             --staging_bucket=gs://perception-staging \
             --display_name="Perception Intelligence System" \
             --trace_to_cloud \
-            app/perception_agent/agents/agent_0_root_orchestrator.yaml
+            app/perception_agent/agents/agent_0_orchestrator.yaml
 
       - name: Verify deployment
         run: |

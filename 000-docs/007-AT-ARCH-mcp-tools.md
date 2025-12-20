@@ -633,10 +633,10 @@ logger.info(json.dumps({
 ```bash
 # Start MCP service locally
 cd app/mcp_service
-uvicorn main:app --reload --port 8081
+uvicorn main:app --reload --port 8080
 
 # Test each endpoint
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{"feed_id": "techcrunch_ai"}'
 ```

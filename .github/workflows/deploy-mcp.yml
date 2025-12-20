@@ -1,0 +1,120 @@
+name: Deploy MCP Service to Cloud Run
+
+# SAFE DEPLOYMENT: Manual only, requires WIF secrets
+# This workflow deploys the MCP service to Cloud Run with explicit target logging
+
+on:
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Deployment environment'
+        required: true
+        default: 'staging'
+        type: choice
+        options:
+          - staging
+          - production
+
+jobs:
+  deploy-mcp:
+    name: Deploy MCP to Cloud Run
+    runs-on: ubuntu-latest
+
+    # Skip if WIF secrets not configured
+    if: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER != '' && secrets.GCP_SERVICE_ACCOUNT_EMAIL != '' }}
+
+    env:
+      GCP_PROJECT_ID: perception-with-intent
+      GCP_REGION: us-central1
+      SERVICE_NAME: perception-mcp
+      MCP_SERVICE_ACCOUNT: mcp-service@perception-with-intent.iam.gserviceaccount.com
+
+    steps:
+      - name: Print Deployment Targets
+        run: |
+          echo "=========================================="
+          echo "MCP Service Deployment Targets"
+          echo "=========================================="
+          echo "Project ID:       ${{ env.GCP_PROJECT_ID }}"
+          echo "Region:           ${{ env.GCP_REGION }}"
+          echo "Service Name:     ${{ env.SERVICE_NAME }}"
+          echo "Service Account:  ${{ env.MCP_SERVICE_ACCOUNT }}"
+          echo "Environment:      ${{ github.event.inputs.environment }}"
+          echo "Ingress:          internal-and-cloud-load-balancing"
+          echo "Auth:             No unauthenticated access (backend-only)"
+          echo "Source Directory: app/mcp_service/"
+          echo "=========================================="
+
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Authenticate to Google Cloud (WIF)
+        uses: google-github-actions/auth@v2
+        with:
+          workload_identity_provider: ${{ secrets.GCP_WORKLOAD_IDENTITY_PROVIDER }}
+          service_account: ${{ secrets.GCP_SERVICE_ACCOUNT_EMAIL }}
+
+      - name: Set up Cloud SDK
+        uses: google-github-actions/setup-gcloud@v2
+
+      - name: Verify GCP Authentication
+        run: |
+          echo "Verifying GCP authentication..."
+          gcloud config get-value project
+          gcloud config get-value account
+
+      - name: Deploy to Cloud Run
+        run: |
+          echo "Deploying MCP service to Cloud Run..."
+          gcloud run deploy ${{ env.SERVICE_NAME }} \
+            --source app/mcp_service \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --platform managed \
+            --service-account ${{ env.MCP_SERVICE_ACCOUNT }} \
+            --ingress internal-and-cloud-load-balancing \
+            --no-allow-unauthenticated \
+            --memory 512Mi \
+            --cpu 1 \
+            --min-instances 0 \
+            --max-instances 10 \
+            --timeout 300 \
+            --port 8080 \
+            --set-env-vars "ENVIRONMENT=${{ github.event.inputs.environment }},MCP_SERVICE_NAME=${{ env.SERVICE_NAME }}" \
+            --format=json
+
+      - name: Get Service URL
+        id: get-url
+        run: |
+          SERVICE_URL=$(gcloud run services describe ${{ env.SERVICE_NAME }} \
+            --region ${{ env.GCP_REGION }} \
+            --project ${{ env.GCP_PROJECT_ID }} \
+            --format='value(status.url)')
+          echo "service_url=$SERVICE_URL" >> $GITHUB_OUTPUT
+          echo "MCP Service deployed to: $SERVICE_URL"
+
+      - name: Test Health Endpoint (Authenticated)
+        run: |
+          echo "Testing health endpoint with authentication..."
+          TOKEN=$(gcloud auth print-identity-token)
+          curl -f -H "Authorization: Bearer $TOKEN" ${{ steps.get-url.outputs.service_url }}/health || exit 1
+          echo "✅ Health check passed"
+
+      - name: Deployment Summary
+        run: |
+          echo "## MCP Service Deployment Summary" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Field | Value |" >> $GITHUB_STEP_SUMMARY
+          echo "|-------|-------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Project | ${{ env.GCP_PROJECT_ID }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Region | ${{ env.GCP_REGION }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service | ${{ env.SERVICE_NAME }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Service Account | ${{ env.MCP_SERVICE_ACCOUNT }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Environment | ${{ github.event.inputs.environment }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Ingress | internal-and-cloud-load-balancing |" >> $GITHUB_STEP_SUMMARY
+          echo "| Auth | Backend-only (no unauthenticated) |" >> $GITHUB_STEP_SUMMARY
+          echo "| URL | ${{ steps.get-url.outputs.service_url }} |" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "✅ Deployment successful!" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "**Next Step:** Set \`MCP_BASE_URL=${{ steps.get-url.outputs.service_url }}\` in Agent Engine runtime config" >> $GITHUB_STEP_SUMMARY

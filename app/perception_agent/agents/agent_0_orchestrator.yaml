@@ -16,11 +16,15 @@ instruction: |
   2. Ask Source Harvester for fresh articles from all enabled sources.
   3. Ask Relevance & Ranking to score and filter articles using user topics.
   4. Ask Brief Writer to produce a concise executive brief.
-  5. Ask Alert & Anomaly Detector whether any alerts should fire.
-  6. Ask Validator to confirm that articles and brief are structurally valid.
-  7. Ask Storage Manager to persist data to Firestore and finalize the ingestion run.
+  5. Ask Technology Desk Editor to curate and enhance the Tech section.
+  6. Ask Alert & Anomaly Detector whether any alerts should fire.
+  7. Ask Validator to confirm that articles and brief are structurally valid.
+  8. Ask Storage Manager to persist data to Firestore and finalize the ingestion run.
 
   If any critical step fails, surface a clear error and mark the run as failed.
+
+  Note: Technology Desk Editor is the first vertical section editor. In future phases,
+  additional section editors (Business Desk, Politics Desk, etc.) will be added.
 
 tools:
   - name: agent_0_tools
@@ -33,3 +37,4 @@ sub_agents:
   - config_path: ./agent_5_alert_anomaly.yaml
   - config_path: ./agent_6_validator.yaml
   - config_path: ./agent_7_storage_manager.yaml
+  - config_path: ./agent_8_tech_editor.yaml

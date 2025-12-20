@@ -1,3 +1,14 @@
+## Task Tracking (Beads / bd)
+- Use `bd` for ALL tasks/issues (no markdown TODO lists).
+- Start of session: `bd ready`
+- Create work: `bd create "Title" -p 1 --description "Context + acceptance criteria"`
+- Update status: `bd update <id> --status in_progress`
+- Finish: `bd close <id> --reason "Done"`
+- End of session: `bd sync` (flush/import/export + git sync)
+- Manual testing safety:
+  - Prefer `BEADS_DIR` to isolate a workspace if needed. (`BEADS_DB` exists but is deprecated.)
+
+
 # CLAUDE.md
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
@@ -107,31 +118,37 @@ Editor-in-Chief: "Alright team, let's go!"
 Executive Dashboard: "New intelligence available!"
 ```
 
-## Progressive Hardening (Smart Development)
+## Cloud-Only Deployment Philosophy
 
-We're not idiots - we develop locally first, then harden for production.
+**CRITICAL:** All testing and deployment happens in the cloud. NO localhost MCP servers.
 
-### Level 1: Local Dev (Chill Mode)
-- In-memory everything (no GCP needed)
-- Manual deployments (just run scripts)
-- No enforcement (break things, learn)
-- Mock data for MCPs
-- `./scripts/dev_run_adk.sh` and you're good
+### The Reality
+```
+Push to GitHub → CI/CD → Deploy to STAGING Cloud Run → Test in Cloud → Promote to PRODUCTION
+```
 
-### Level 2: Staging (Warning Mode)
-- Real Firestore, test BigQuery
-- Drift checks warn but don't block
-- Some env vars required
-- MCPs use staging secrets
-- "Hey, this might be a problem..."
+**What This Means:**
+- ✅ **Agents:** Local development with `python -m app.main` is OK (agents run anywhere)
+- ❌ **MCP Service:** NO local MCP servers - Cloud Run is the ONLY valid runtime
+- ✅ **Testing:** All E2E tests use staging Cloud Run URLs
+- ❌ **Port 8080:** Not for MCP - that's for local agent development only
+- ✅ **MCP URL:** `https://perception-mcp-348724539390.us-central1.run.app`
 
-### Level 3: Production (Lockdown Mode)
+### Deployment Environments
+
+**Staging (Current):**
+- MCP on Cloud Run with `--ingress all` for testing
+- Firestore production database
+- Cloud Logging enabled
+- Real RSS feeds, real data
+- Manual deployment triggers
+
+**Production (Future):**
 - Full Bob's Brain rules (R1-R10)
 - CI-only deployments (GitHub Actions + WIF)
-- Drift detection blocks everything
+- `--ingress internal-and-cloud-load-balancing`
 - SPIFFE IDs everywhere
-- MCPs have minimal permissions
-- "This shit better work or we're not deploying"
+- Drift detection blocks everything
 
 ## Tech Stack
 
@@ -398,26 +415,72 @@ app.register_agent(root_agent)
 
 ## MCP Services (The Toolboxes)
 
-Each MCP is a simple Cloud Run service that does ONE thing:
+**DEPLOYED:** `https://perception-mcp-348724539390.us-central1.run.app`
 
-### NewsIngestionMCP
+### Current Status
+- ✅ **Deployed to Cloud Run** (us-central1)
+- ✅ **Health endpoint verified** - Returns JSON status
+- ✅ **Real RSS fetching working** - 5+ articles, 270ms latency
+- ✅ **Cloud Logging operational** - Structured JSON logs
+- ✅ **No ERROR logs** - Clean service
+- ⏳ **7 MCP tools** - fetch_rss_feed (real), others stubbed
+
+### MCP Service Architecture
+
+**Location:** `app/mcp_service/`
+**Dockerfile:** `app/mcp_service/Dockerfile`
+**Deployment:** `gcloud run deploy perception-mcp --source app/mcp_service`
+
+Each MCP tool is a FastAPI endpoint that does ONE thing:
+
 ```python
 @app.post("/mcp/tools/fetch_rss_feed")
 async def fetch_rss(feed_id: str):
-    # Just fetch the damn RSS feed
-    return {"articles": [...]}
-```
+    """Fetches RSS feed and returns articles."""
+    # Real implementation - talks to RSS feeds
+    return {"articles": [...], "count": 5}
 
-### StorageMCP
-```python
 @app.post("/mcp/tools/save_article")
 async def save_article(article: Article):
-    # Save to Firestore, no thinking required
+    """Saves article to Firestore."""
+    # Stub - will save to Firestore
     db.collection("articles").add(article.dict())
     return {"status": "saved"}
 ```
 
-That's it. MCPs are dumb tools. Agents are smart. Firebase is for humans.
+**That's it. MCPs are dumb tools. Agents are smart. Firebase is for humans.**
+
+### Verifying MCP is Alive
+
+```bash
+# Health check
+curl https://perception-mcp-348724539390.us-central1.run.app/health
+
+# Test RSS fetching
+curl -X POST https://perception-mcp-348724539390.us-central1.run.app/mcp/tools/fetch_rss_feed \
+  -H "Content-Type: application/json" \
+  -d '{"feed_id": "hackernews"}'
+
+# Check Cloud Logging
+gcloud logging read \
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="perception-mcp"' \
+  --project=perception-with-intent \
+  --limit=10
+```
+
+### MCP Tools Available
+
+1. **fetch_rss_feed** ✅ (Real implementation)
+   - Fetches RSS feeds
+   - Returns structured articles
+   - Validated: 5+ articles, 270ms latency
+
+2. **fetch_api_feed** (Stub)
+3. **fetch_webpage** (Stub)
+4. **store_articles** (Stub)
+5. **generate_brief** (Stub)
+6. **log_ingestion_run** (Stub)
+7. **send_notification** (Stub)
 
 ## The Data
 
@@ -464,6 +527,63 @@ That's it. MCPs are dumb tools. Agents are smart. Firebase is for humans.
 - **Total: ~$70/month**
 
 Not bad for executive-level intelligence, right?
+
+## Observability & Monitoring
+
+**Documentation:** See `000-docs/6767-AT-ARCH-observability-and-monitoring.md` for comprehensive guide.
+
+### Cloud Logging
+
+**MCP Service Logs:**
+```bash
+gcloud logging read \
+  'resource.type="cloud_run_revision" AND resource.labels.service_name="perception-mcp"' \
+  --project=perception-with-intent \
+  --limit=20
+```
+
+**Agent Engine Logs:**
+```bash
+gcloud logging read \
+  'resource.type="aiplatform.googleapis.com/Agent"' \
+  --project=perception-with-intent \
+  --limit=20
+```
+
+### What We Track
+
+**MCP Metrics:**
+- Request path, method, status code
+- Latency (ms)
+- Article count returned
+- Error rates (currently 0%)
+
+**Agent Metrics:**
+- Agent-to-agent communication traces
+- Tool invocation latency
+- Firestore batch write performance
+- E2E ingestion run success rate
+
+### Cloud Run Metrics
+
+**View in Console:**
+```
+Cloud Console → Cloud Run → perception-mcp → Metrics
+```
+
+**Key Metrics:**
+- Request count (requests/second)
+- Request latency (50th, 95th, 99th percentile)
+- Container CPU utilization
+- Container memory utilization
+- Billable container time
+
+### Alerts (Future)
+
+- MCP service down > 5 minutes
+- Error rate > 5%
+- Latency > 2 seconds (95th percentile)
+- Daily ingestion failure
 
 ## Production Rules (Bob's Brain Style)
 
@@ -626,18 +746,45 @@ pip list | grep google
 
 ## Current Status
 
-**Phase 1: Public Showcase** (where we are)
-- ✅ Infrastructure ready (Terraform provisioned)
-- ✅ WIF configured (keyless auth from GitHub)
-- ✅ Dashboard scaffolded
-- 🔄 Agents being implemented (3-4 days)
-- 🔄 MCPs being built
+**Version:** v0.3.0 (2025-11-15)
 
-**Phase 2: SaaS Platform** (future)
-- Multi-tenant with Firebase Auth
-- Stripe billing
+**What's Working:**
+- ✅ **MCP Service Deployed** - Cloud Run (us-central1)
+  - Service URL: `https://perception-mcp-348724539390.us-central1.run.app`
+  - Real RSS fetching validated (5+ articles, 270ms)
+  - Cloud Logging operational
+- ✅ **8-Agent System Complete** - Agent 0-7 + Tech Editor
+  - E2E ingestion pipeline built
+  - Firestore batch operations working
+  - A2A Protocol integration ready
+- ✅ **Infrastructure Ready**
+  - Terraform provisioned
+  - WIF configured (GitHub → GCP keyless auth)
+  - Firebase dashboard with Auth enabled
+- ✅ **Documentation Complete**
+  - Observability guide
+  - Agent Engine deployment guide
+  - Release log tracking 3 versions
+  - First AAR created
+
+**What's Pending:**
+- ⏳ **Agent Engine Deployment** - Scripts ready, needs manual trigger
+- ⏳ **E2E Ingestion Run** - Awaiting Agent Engine deployment
+- ⏳ **MCP_BASE_URL Configuration** - Research needed for env vars in Agent Engine
+- ⏳ **Dashboard Data Integration** - Wire Firestore to UI
+
+**Next Phase (v0.4.0):**
+- Dashboard integration with live Firestore data
+- Display briefs on homepage
+- Article lists per section
+- Live ingestion status tracking
+
+**Future (v1.0.0 - Production Launch):**
+- Multi-tenant Firebase Auth
+- Stripe billing integration
 - Custom topics per client
 - White-label options
+- Production ingress controls
 
 ## Key Dependencies
 
@@ -696,15 +843,54 @@ export VERTEX_AGENT_ENGINE_ID=your-agent-engine-id
 make deploy
 ```
 
-## Important Documentation
+## Documentation Structure
 
-Project-specific docs (check these for details):
-- **AGENTS-DEPLOYMENT.md** - Detailed agent architecture and deployment patterns
+**All documentation lives in `000-docs/`** following strict naming conventions.
+
+### Naming Convention
+
+**Format:** `PREFIX-TYPE-CATEGORY-description.md`
+
+**6767- Prefix (Foundational/Evergreen):**
+- `6767-AT-ARCH-` = Architecture documents
+- `6767-OD-GUID-` = Operational guides
+- `6767-PP-PLAN-` = Planning documents
+- `6767-PM-REPO-` = Project management/reports
+
+Examples:
+- `6767-AT-ARCH-observability-and-monitoring.md` (architecture)
+- `6767-OD-GUID-agent-engine-deploy.md` (deployment guide)
+- `6767-PP-PLAN-release-log.md` (release tracking)
+
+**Numeric Prefix (AARs/Phase Reports):**
+- `041-AA-REPT-phase-E2E-agent-engine-deployment.md` (AAR)
+- `042-AA-REPT-phase-dashboard-integration.md` (future AAR)
+
+### Key Documents
+
+**Architecture:**
+- `6767-AT-ARCH-observability-and-monitoring.md` - Monitoring stack
+- `6767-AT-ARCH-e2e-ingestion-and-tech-editor.md` - E2E workflow
+- `6767-AT-ARCH-mcp-consolidation.md` - MCP cleanup
+- `012-AT-ARCH-agents-overview.md` - Agent system overview
+
+**Operational Guides:**
+- `6767-OD-GUID-agent-engine-deploy.md` - Agent Engine deployment
+- `6767-OD-GUID-agent1-mcp-integration.md` - MCP integration
+- `6767-OD-GUID-dev-ingestion-run.md` - Developer ingestion guide
+
+**Planning:**
+- `6767-PP-PLAN-release-log.md` - Version tracking across all releases
+- `011-PP-PLAN-build-phases-architecture.md` - Build phases
+
+**AARs (After Action Reports):**
+- `041-AA-REPT-phase-E2E-agent-engine-deployment.md` - E2E deployment AAR
+
+**Legacy Docs:**
+- **AGENTS-DEPLOYMENT.md** - Detailed agent architecture
 - **WIF-SETUP-GUIDE.md** - Workload Identity Federation setup
-- **PRODUCT-ROADMAP.md** - Feature roadmap and timeline
-- **STATUS.md** - Current project status and TODOs
-- **000-docs/** - All technical documentation
-- **000-usermanuals/** - User manuals and guides
+- **PRODUCT-ROADMAP.md** - Feature roadmap
+- **STATUS.md** - Current project status
 
 ## The Philosophy
 
@@ -732,8 +918,10 @@ Simple. Clean. Works.
 
 ---
 
-**Status:** Getting this online ASAP
-**Next:** Deploy agents, test MCPs, ship dashboard
-**Timeline:** 3-4 days to Phase 1 launch
+**Status:** v0.3.0 Complete - MCP Deployed, Agent Engine Ready
+**Next:** Deploy Agent Engine → Run E2E Ingestion → Wire Dashboard
 **GCP Project:** `perception-with-intent`
 **Dashboard:** https://perception-with-intent.web.app
+**MCP Service:** https://perception-mcp-348724539390.us-central1.run.app
+**Release Log:** See `000-docs/6767-PP-PLAN-release-log.md`
+**Latest AAR:** See `000-docs/041-AA-REPT-phase-E2E-agent-engine-deployment.md`

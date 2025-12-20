@@ -114,13 +114,13 @@ cd dashboard && firebase deploy --only hosting
 
 **Runtime:** Python 3.12 + FastAPI 0.109.0 + uvicorn
 **Location:** `/home/jeremy/000-projects/perception/app/mcp_service`
-**Port:** 8081
+**Port:** 8080
 **Process ID:** 2279623
 **Host:** 0.0.0.0 (accessible from local network)
 
 **Health Check:**
 ```bash
-curl -s http://localhost:8081/health | jq '.'
+curl -s http://localhost:8080/health | jq '.'
 ```
 
 **Response:**
@@ -212,8 +212,8 @@ python app/agent_engine_app.py  # Output: ✓ All 8 agents verified
 **Verification:**
 ```bash
 ls -1 app/mcp_service/routers/*.py | wc -l  # Output: 8
-curl http://localhost:8081/health           # Status: healthy
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl http://localhost:8080/health           # Status: healthy
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{"feed_url": "https://news.ycombinator.com/rss", "max_items": 3}'
 # Response: 200 OK with 3 articles
@@ -325,7 +325,7 @@ ls -1 000-docs/6767-*.md              # Lists 2 files with 6767- prefix
 
 **Command:**
 ```bash
-curl -s http://localhost:8081/health | jq '.'
+curl -s http://localhost:8080/health | jq '.'
 ```
 
 **Result:** ✅ PASS
@@ -344,7 +344,7 @@ curl -s http://localhost:8081/health | jq '.'
 
 **Command:**
 ```bash
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{
     "feed_url": "https://news.ycombinator.com/rss",
@@ -588,7 +588,7 @@ Status: ✅ CONFIGURED
    - Test Cloud Run endpoint
 
 4. **Update Agent 1 MCP_BASE_URL:**
-   - Change from `http://localhost:8081`
+   - Change from `http://localhost:8080`
    - To Cloud Run URL: `https://mcp-service-HASH-uc.a.run.app`
 
 5. **Implement Firestore Integration:**
@@ -616,10 +616,10 @@ git log --oneline -5
 gcloud config get-value project
 
 # 3. Check MCP service health
-curl -s http://localhost:8081/health | jq '.status'
+curl -s http://localhost:8080/health | jq '.status'
 
 # 4. Test fetch_rss_feed
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{"feed_url": "https://news.ycombinator.com/rss", "max_items": 1}'
 

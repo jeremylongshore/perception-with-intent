@@ -19,6 +19,19 @@ jobs:
     environment: production
 
     steps:
+      - name: Print Deployment Targets
+        run: |
+          echo "=========================================="
+          echo "Vertex AI Agent Engine Deployment Targets"
+          echo "=========================================="
+          echo "Project ID:       perception-with-intent"
+          echo "Region:           us-central1"
+          echo "Staging Bucket:   gs://perception-staging"
+          echo "Agent Count:      2 (Agent 0, Agent 1)"
+          echo "Agent 0 YAML:     app/perception_agent/agents/agent_0_orchestrator.yaml"
+          echo "Agent 1 YAML:     app/perception_agent/agents/agent_1_source_harvester.yaml"
+          echo "=========================================="
+
       - name: Checkout code
         uses: actions/checkout@v4
 
@@ -59,14 +72,14 @@ jobs:
             --min_instances=0 \
             --max_instances=5
 
-      - name: Deploy Agent 1 (Topic Manager)
+      - name: Deploy Agent 1 (Source Harvester)
         run: |
           adk deploy agent_engine \
             --project=perception-with-intent \
             --region=us-central1 \
             --staging_bucket=gs://perception-staging \
-            --display_name="Perception Topic Manager" \
-            app/perception_agent/agents/agent_1_topic_manager.yaml \
+            --display_name="Perception Source Harvester" \
+            app/perception_agent/agents/agent_1_source_harvester.yaml \
             --trace_to_cloud \
             --cpu=1 \
             --memory=1Gi \

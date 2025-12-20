@@ -1,0 +1,271 @@
+name: CI Smoke Tests
+
+# This workflow runs validation and smoke tests WITHOUT requiring GCP credentials.
+# It can run on PRs, pushes, and manually to verify code quality before deployment.
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+jobs:
+  python-smoke:
+    name: Python Smoke Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Create virtual environment
+        run: |
+          python -m venv .venv
+          source .venv/bin/activate
+          echo "VIRTUAL_ENV=$VIRTUAL_ENV" >> $GITHUB_ENV
+          echo "$VIRTUAL_ENV/bin" >> $GITHUB_PATH
+
+      - name: Install MCP service dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r app/mcp_service/requirements.txt
+
+      - name: Compile MCP service (syntax check)
+        run: |
+          python -m compileall app/mcp_service -q
+
+      - name: Test MCP service imports
+        run: |
+          python -c "from app.mcp_service.main import app; print('✅ MCP service imports OK')"
+
+      - name: Validate MCP service can start (--help)
+        run: |
+          cd app/mcp_service
+          uvicorn main:app --help
+
+      - name: Run MCP unit tests (if they exist)
+        run: |
+          if [ -d "tests/mcp_service" ]; then
+            pytest tests/mcp_service -v
+          else
+            echo "⚠️  No MCP unit tests found (tests/mcp_service/ does not exist)"
+          fi
+
+  agent-smoke:
+    name: Agent Configuration Smoke Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.12'
+
+      - name: Verify all 8 agent YAML files exist
+        run: |
+          echo "Checking for 8 agent YAML configs..."
+          EXPECTED_AGENTS=(
+            "agent_0_orchestrator.yaml"
+            "agent_1_source_harvester.yaml"
+            "agent_2_topic_manager.yaml"
+            "agent_3_relevance_ranking.yaml"
+            "agent_4_brief_writer.yaml"
+            "agent_5_alert_anomaly.yaml"
+            "agent_6_validator.yaml"
+            "agent_7_storage_manager.yaml"
+          )
+
+          for agent in "${EXPECTED_AGENTS[@]}"; do
+            if [ -f "app/perception_agent/agents/$agent" ]; then
+              echo "✅ Found: $agent"
+            else
+              echo "❌ Missing: $agent"
+              exit 1
+            fi
+          done
+
+          echo "✅ All 8 agent YAML configs present"
+
+      - name: Verify all 8 agent tools exist
+        run: |
+          echo "Checking for 8 agent tools modules..."
+          EXPECTED_TOOLS=(
+            "agent_0_tools.py"
+            "agent_1_tools.py"
+            "agent_2_tools.py"
+            "agent_3_tools.py"
+            "agent_4_tools.py"
+            "agent_5_tools.py"
+            "agent_6_tools.py"
+            "agent_7_tools.py"
+          )
+
+          for tool in "${EXPECTED_TOOLS[@]}"; do
+            if [ -f "app/perception_agent/tools/$tool" ]; then
+              echo "✅ Found: $tool"
+            else
+              echo "❌ Missing: $tool"
+              exit 1
+            fi
+          done
+
+          echo "✅ All 8 agent tools modules present"
+
+      - name: Compile agent tools (syntax check)
+        run: |
+          python -m compileall app/perception_agent/tools -q
+
+      - name: Validate agent_engine_app.py exists and compiles
+        run: |
+          if [ -f "app/agent_engine_app.py" ]; then
+            echo "✅ agent_engine_app.py exists"
+            python -m compileall app/agent_engine_app.py -q
+            echo "✅ agent_engine_app.py compiles successfully"
+          else
+            echo "❌ agent_engine_app.py not found"
+            exit 1
+          fi
+
+      - name: Test agent_engine_app.py imports
+        run: |
+          cd app
+          python -c "import agent_engine_app; print('✅ agent_engine_app imports OK')"
+
+      - name: Validate YAML syntax (basic)
+        run: |
+          pip install pyyaml
+          python -c "
+          import yaml
+          import sys
+          from pathlib import Path
+
+          agents_dir = Path('app/perception_agent/agents')
+          for yaml_file in agents_dir.glob('*.yaml'):
+              print(f'Validating {yaml_file.name}...')
+              try:
+                  with open(yaml_file) as f:
+                      yaml.safe_load(f)
+                  print(f'✅ {yaml_file.name} is valid YAML')
+              except Exception as e:
+                  print(f'❌ {yaml_file.name} is invalid: {e}')
+                  sys.exit(1)
+          "
+
+  dashboard-smoke:
+    name: Dashboard Smoke Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '20'
+          cache: 'npm'
+          cache-dependency-path: dashboard/package-lock.json
+
+      - name: Install dashboard dependencies
+        working-directory: dashboard
+        run: npm ci
+
+      - name: TypeScript type checking
+        working-directory: dashboard
+        run: npx tsc --noEmit
+
+      - name: Build dashboard (smoke test)
+        working-directory: dashboard
+        run: npm run build
+        env:
+          NODE_ENV: production
+
+      - name: Verify build artifacts exist
+        run: |
+          if [ -f "dashboard/dist/index.html" ]; then
+            echo "✅ dashboard/dist/index.html exists"
+            ls -lh dashboard/dist/index.html
+          else
+            echo "❌ Build failed - dashboard/dist/index.html not found"
+            exit 1
+          fi
+
+  data-source-smoke:
+    name: Data Source Smoke Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Verify RSS feeds CSV exists
+        run: |
+          if [ -f "data/initial_feeds.csv" ]; then
+            echo "✅ data/initial_feeds.csv exists"
+            wc -l data/initial_feeds.csv
+          else
+            echo "❌ data/initial_feeds.csv not found"
+            exit 1
+          fi
+
+      - name: Validate CSV structure
+        run: |
+          python3 -c "
+          import csv
+          import sys
+
+          required_columns = ['source_id', 'name', 'type', 'url', 'category', 'enabled']
+
+          with open('data/initial_feeds.csv') as f:
+              reader = csv.DictReader(f)
+              headers = reader.fieldnames
+
+              if headers != required_columns:
+                  print(f'❌ CSV headers mismatch')
+                  print(f'Expected: {required_columns}')
+                  print(f'Got: {headers}')
+                  sys.exit(1)
+
+              row_count = sum(1 for row in reader)
+              print(f'✅ CSV structure valid ({row_count} feeds)')
+          "
+
+  summary:
+    name: Smoke Test Summary
+    runs-on: ubuntu-latest
+    needs: [python-smoke, agent-smoke, dashboard-smoke, data-source-smoke]
+    if: always()
+
+    steps:
+      - name: Report status
+        run: |
+          echo "## Smoke Test Results" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Component | Status |" >> $GITHUB_STEP_SUMMARY
+          echo "|-----------|--------|" >> $GITHUB_STEP_SUMMARY
+          echo "| Python/MCP Service | ${{ needs.python-smoke.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Agent Configs | ${{ needs.agent-smoke.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Dashboard | ${{ needs.dashboard-smoke.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+          echo "| Data Sources | ${{ needs.data-source-smoke.result == 'success' && '✅ Pass' || '❌ Fail' }} |" >> $GITHUB_STEP_SUMMARY
+
+      - name: Check overall status
+        run: |
+          if [[ "${{ needs.python-smoke.result }}" == "success" ]] && \
+             [[ "${{ needs.agent-smoke.result }}" == "success" ]] && \
+             [[ "${{ needs.dashboard-smoke.result }}" == "success" ]] && \
+             [[ "${{ needs.data-source-smoke.result }}" == "success" ]]; then
+            echo "✅ All smoke tests passed!"
+            exit 0
+          else
+            echo "❌ One or more smoke tests failed"
+            exit 1
+          fi

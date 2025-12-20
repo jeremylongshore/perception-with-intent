@@ -4,11 +4,15 @@ Tools for Agent 6 (Validator).
 These functions validate data quality, check schemas, and detect duplicates
 before allowing storage to Firestore.
 
-Implementation details (Firestore duplicate checking) will be added in later phases.
+Phase E2E: Implements production-ready validation with schema checking.
 """
 
 from typing import Any, Dict, List
 import hashlib
+import logging
+import json
+
+logger = logging.getLogger(__name__)
 
 
 def validate_article_schema(article: Dict[str, Any]) -> Dict[str, Any]:
@@ -123,3 +127,107 @@ def generate_url_hash(url: str) -> str:
         SHA256 hash of the URL.
     """
     return hashlib.sha256(url.encode()).hexdigest()
+
+
+def validate_articles(articles: List[Dict[str, Any]]) -> Dict[str, Any]:
+    """
+    Validate a list of articles.
+
+    Args:
+        articles: List of article dicts to validate
+
+    Returns:
+        Validation result with:
+        - valid (bool): True if all articles pass validation
+        - errors (list): List of error messages
+        - valid_count (int): Number of valid articles
+        - invalid_count (int): Number of invalid articles
+    """
+    errors = []
+    valid_count = 0
+    invalid_count = 0
+
+    for i, article in enumerate(articles):
+        result = validate_article_schema(article)
+        if result["valid"]:
+            valid_count += 1
+        else:
+            invalid_count += 1
+            for error in result["errors"]:
+                errors.append(f"Article {i}: {error}")
+
+    is_valid = invalid_count == 0
+
+    logger.info(json.dumps({
+        "severity": "INFO",
+        "tool": "agent_6",
+        "operation": "validate_articles",
+        "total_count": len(articles),
+        "valid_count": valid_count,
+        "invalid_count": invalid_count,
+        "is_valid": is_valid
+    }))
+
+    return {
+        "valid": is_valid,
+        "errors": errors,
+        "valid_count": valid_count,
+        "invalid_count": invalid_count
+    }
+
+
+def validate_brief(brief: Dict[str, Any]) -> Dict[str, Any]:
+    """
+    Validate a brief payload.
+
+    Args:
+        brief: Brief dict to validate
+
+    Returns:
+        Validation result with:
+        - valid (bool): True if brief passes validation
+        - errors (list): List of error messages
+    """
+    errors = []
+    required_fields = ["brief_id", "date", "headline", "sections"]
+
+    # Check required fields
+    for field in required_fields:
+        if field not in brief:
+            errors.append(f"Missing required field: {field}")
+
+    # Validate sections is a list
+    if "sections" in brief:
+        if not isinstance(brief["sections"], list):
+            errors.append("Field 'sections' must be a list")
+        elif len(brief["sections"]) == 0:
+            errors.append("Brief must have at least one section")
+        else:
+            # Validate each section
+            for i, section in enumerate(brief["sections"]):
+                if not isinstance(section, dict):
+                    errors.append(f"Section {i} must be a dict")
+                    continue
+
+                if "section_name" not in section:
+                    errors.append(f"Section {i}: Missing 'section_name'")
+                if "key_points" not in section:
+                    errors.append(f"Section {i}: Missing 'key_points'")
+                if "top_articles" not in section:
+                    errors.append(f"Section {i}: Missing 'top_articles'")
+
+    is_valid = len(errors) == 0
+
+    logger.info(json.dumps({
+        "severity": "INFO",
+        "tool": "agent_6",
+        "operation": "validate_brief",
+        "brief_id": brief.get("brief_id"),
+        "is_valid": is_valid,
+        "error_count": len(errors)
+    }))
+
+    return {
+        "valid": is_valid,
+        "errors": errors
+    }

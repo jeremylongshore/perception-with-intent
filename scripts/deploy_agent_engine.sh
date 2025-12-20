@@ -1,31 +1,49 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Deploy the IAMJVP agent to Vertex AI Agent Engine.
-# Relies on the ADK CLI; confirm exact command once manuals finalize.
+# Deploy Perception Agent Engine to Vertex AI
+# Deploys the multi-agent system (Agent 0-8) to Agent Engine
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
-AGENT_CONFIG="$ROOT_DIR/app/jvp_agent/agent.yaml"
+AGENT_ENGINE_APP="$ROOT_DIR/agent_engine_app.py"
 
 : "${VERTEX_PROJECT_ID:?VERTEX_PROJECT_ID is required}"
 : "${VERTEX_LOCATION:?VERTEX_LOCATION is required}"
-: "${VERTEX_AGENT_ENGINE_ID:?VERTEX_AGENT_ENGINE_ID is required}"
 
 if ! command -v adk >/dev/null 2>&1; then
-  echo "adk CLI not found. // TODO(ask): confirm installation method (pip, gcloud component)." >&2
+  echo "ERROR: adk CLI not found. Install with: pip install google-genai[adk]" >&2
   exit 1
 fi
 
-echo "Deploying IAMJVP commander to Vertex AI Agent Engine..."
-echo "Project: ${VERTEX_PROJECT_ID}"
-echo "Location: ${VERTEX_LOCATION}"
-echo "Agent Engine ID: ${VERTEX_AGENT_ENGINE_ID}"
+if [[ ! -f "$AGENT_ENGINE_APP" ]]; then
+  echo "ERROR: Agent Engine app not found at $AGENT_ENGINE_APP" >&2
+  exit 1
+fi
 
-# TODO(ask): Validate final flag set with manuals; placeholder below matches current guidance.
+echo "=========================================="
+echo "Deploying Perception to Vertex AI Agent Engine"
+echo "=========================================="
+echo "Project:       ${VERTEX_PROJECT_ID}"
+echo "Location:      ${VERTEX_LOCATION}"
+echo "App:           ${AGENT_ENGINE_APP}"
+echo "Display Name:  Perception With Intent"
+echo "=========================================="
+
+# Deploy Agent Engine app with telemetry
+cd "$ROOT_DIR"
 adk deploy agent_engine \
-  --agent-config "${AGENT_CONFIG}" \
-  --project "${VERTEX_PROJECT_ID}" \
-  --location "${VERTEX_LOCATION}" \
-  --agent-engine-id "${VERTEX_AGENT_ENGINE_ID}"
+  --project="${VERTEX_PROJECT_ID}" \
+  --region="${VERTEX_LOCATION}" \
+  --display_name="Perception With Intent" \
+  "${AGENT_ENGINE_APP}" \
+  --trace_to_cloud
 
-echo "Deployment command submitted. Verify status in the Google Cloud console."
+echo "=========================================="
+echo "Deployment complete!"
+echo "=========================================="
+echo ""
+echo "Verify deployment:"
+echo "  gcloud alpha aiplatform agents list \\"
+echo "    --project=${VERTEX_PROJECT_ID} \\"
+echo "    --location=${VERTEX_LOCATION}"
+echo ""

@@ -359,7 +359,7 @@ latency_histogram.record(latency_ms, {"feed_url": feed_url})
 ### Fetch Latest Articles (Last 24 Hours)
 
 ```bash
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{
     "feed_url": "https://techcrunch.com/category/artificial-intelligence/feed/",
@@ -371,7 +371,7 @@ curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
 ### Fetch All Available Articles
 
 ```bash
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{
     "feed_url": "https://news.ycombinator.com/rss",
@@ -383,7 +383,7 @@ curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
 ### Fetch with Request Tracking
 
 ```bash
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{
     "feed_url": "https://www.theverge.com/rss/ai-artificial-intelligence/index.xml",
@@ -431,10 +431,10 @@ async def test_fetch_techcrunch():
 
 ```bash
 # Start MCP service
-uvicorn app.mcp_service.main:app --port 8081
+uvicorn app.mcp_service.main:app --port 8080
 
 # Test endpoint
-curl -X POST http://localhost:8081/mcp/tools/fetch_rss_feed \
+curl -X POST http://localhost:8080/mcp/tools/fetch_rss_feed \
   -H "Content-Type: application/json" \
   -d '{"feed_url": "https://techcrunch.com/feed/", "max_items": 5}'
 ```
