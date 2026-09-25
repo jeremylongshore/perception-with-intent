@@ -23,7 +23,7 @@ aioresponses>=0.7.6  # Mock aiohttp requests
 
 # API Testing
 fastapi[all]>=0.115.0
-starlette>=0.41.0
+starlette>=1.6.0
 
 # TUI Testing
 pyte>=0.8.2  # Terminal emulator for testing
