@@ -10,7 +10,7 @@ pytest-timeout>=2.3.0
 pytest-mock>=3.14.0
 pytest-benchmark>=4.0.0
 pytest-html>=4.1.0
-pytest-sugar>=1.0.0  # Better test output
+pytest-sugar>=1.1.1  # Better test output
 
 # Playwright for E2E browser testing
 playwright>=1.49.0
